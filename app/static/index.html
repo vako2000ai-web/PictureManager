@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PictureManager</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<header>
+  <h1>PictureManager</h1>
+  <nav id="nav">
+    <button data-screen="roots">Источники</button>
+    <button data-screen="catalog">Каталог</button>
+    <button data-screen="dupes">Дубли</button>
+    <button data-screen="move">Перемещение</button>
+    <button data-screen="heic">HEIC → JPEG</button>
+    <button data-screen="journal">Журнал</button>
+  </nav>
+</header>
+<div id="warnings"></div>
+<div id="jobs"></div>
+<main id="main"></main>
+<script src="/static/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,24 @@
+[project]
+name = "picture-manager"
+version = "0.1.0"
+description = "Локальный менеджер фото- и видеоархива (каталог, дубли, раскладка по датам, HEIC → JPEG)"
+requires-python = ">=3.10"
+dependencies = [
+    "fastapi>=0.110",
+    "uvicorn>=0.29",
+    "Pillow>=10.0",
+    "pillow-heif>=0.16",
+    "piexif>=1.1.3",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "httpx>=0.27"]
+
+[tool.setuptools]
+packages = ["app"]
+
+[tool.setuptools.package-data]
+app = ["static/*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

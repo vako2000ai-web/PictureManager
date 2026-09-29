@@ -8,3 +8,5 @@ venv/
 .thumbnails/
 .pytest_cache/
 .claude/settings.local.json
+data/
+*.egg-info/
