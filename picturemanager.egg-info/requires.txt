@@ -1,9 +1,0 @@
-fastapi
-uvicorn[standard]
-pillow
-pillow-heif
-exifread
-
-[dev]
-pytest
-httpx
