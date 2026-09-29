@@ -121,7 +121,7 @@ def scan_root(db: Database, root_id: int, settings: Settings, ctx: JobContext | 
             rel = Path(os.path.relpath(entry.path, root_path)).as_posix()
             seen.add(rel)
             if ctx:
-                ctx.add(bytes=st.st_size, files=1, total_bytes=st.st_size, total_files=1)
+                ctx.add(bytes=st.st_size, files=1, total_bytes=st.st_size, total_files=1, current=entry.path)
             old = known.get(rel)
             if old and old["size"] == st.st_size and old["mtime_ns"] == st.st_mtime_ns and old["status"] == "present":
                 stats["unchanged"] += 1

@@ -37,28 +37,60 @@ window.addEventListener("hashchange", showTab);
 
 /* ---------- фоновые задачи ---------- */
 let currentJob = null;
+const KIND = { scan: "Сканирование", duplicates: "Поиск дублей", move: "Перемещение", rollback: "Откат", convert: "Конвертация HEIC" };
+const fmtTime = (sec) => `${String(Math.floor(sec / 60)).padStart(2, "0")}:${String(Math.floor(sec % 60)).padStart(2, "0")}`;
+let jobTimer = null;
 function trackJob(jobId, onDone) {
   currentJob = jobId;
-  const bar = $("#jobbar"), text = $("#jobtext"), prog = $("#jobprog");
+  const bar = $("#jobbar"), text = $("#jobtext"), track = $("#jobtrack"), fill = $(".fill", track);
+  const started = Date.now();
+  clearInterval(jobTimer);
+  // Время тикает независимо от сервера: если оно идёт, интерфейс не завис.
+  jobTimer = setInterval(() => { $("#jobtime").textContent = "прошло " + fmtTime((Date.now() - started) / 1000); }, 500);
+  $("#jobtime").textContent = "прошло 00:00";
   bar.hidden = false;
+  bar.classList.remove("finished");
+  track.classList.add("indeterminate");
+  fill.style.width = "";
   $("#jobcancel").hidden = false;
+  $("#jobcur").textContent = "";
+  text.textContent = "Запуск…";
   const es = new EventSource(`/api/jobs/${jobId}/events`);
   es.onmessage = (ev) => {
     const j = JSON.parse(ev.data);
-    const pct = j.total_bytes ? (100 * j.done_bytes) / j.total_bytes : (j.total_files ? (100 * j.done_files) / j.total_files : 0);
-    prog.value = Math.min(100, pct);
-    text.textContent = `${j.kind}: ${j.status} — ${j.done_files}/${j.total_files} файлов, ${fmtBytes(j.done_bytes)} из ${fmtBytes(j.total_bytes)}`;
-    if (["done", "cancelled", "error", "interrupted"].includes(j.status)) {
+    const name = KIND[j.kind] || j.kind;
+    const known = j.kind !== "scan" && j.total_bytes > 0;          // у скана общий объём растёт по ходу обхода
+    track.classList.toggle("indeterminate", !known && !TERMINAL.includes(j.status));
+    if (known) {
+      const pct = Math.min(100, (100 * j.done_bytes) / j.total_bytes);
+      fill.style.width = pct + "%";
+      track.setAttribute("aria-valuenow", Math.round(pct));
+    } else if (TERMINAL.includes(j.status)) {
+      fill.style.width = "100%";
+    }
+    if (j.kind === "scan" && !TERMINAL.includes(j.status)) {
+      text.textContent = `${name}: найдено файлов ${j.done_files}, ${fmtBytes(j.done_bytes)}`;
+    } else {
+      text.textContent = `${name}: ${STATUS[j.status] || j.status} — ${j.done_files}/${j.total_files} файлов, ${fmtBytes(j.done_bytes)} из ${fmtBytes(j.total_bytes)}`;
+    }
+    if (j.current) $("#jobcur").textContent = j.current;
+    if (TERMINAL.includes(j.status)) {
       es.close();
+      clearInterval(jobTimer);
       currentJob = null;
+      bar.classList.add("finished");
+      track.classList.remove("indeterminate");
       $("#jobcancel").hidden = true;
-      text.textContent += j.error ? ` — ${j.error}` : "";
-      setTimeout(() => { if (!currentJob) bar.hidden = true; }, 4000);
+      $("#jobcur").textContent = "";
+      if (j.error) text.textContent += ` — ${j.error}`;
+      setTimeout(() => { if (!currentJob) bar.hidden = true; }, 5000);
       if (onDone) onDone(j);
     }
   };
   es.onerror = () => es.close();
 }
+const TERMINAL = ["done", "cancelled", "error", "interrupted"];
+const STATUS = { queued: "в очереди", running: "выполняется", done: "готово", cancelled: "отменено", error: "ошибка", interrupted: "прервано" };
 $("#jobcancel").onclick = () => currentJob && api(`/jobs/${currentJob}/cancel`, { method: "POST" }).catch(fail);
 
 function resultSummary(j) {

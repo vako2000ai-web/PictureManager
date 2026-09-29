@@ -41,3 +41,20 @@ def test_cancelled_exception_from_helper(jobs):
         raise Cancelled()
 
     assert jobs.wait(jobs.submit("t", work))["status"] == "cancelled"
+
+
+def test_running_job_exposes_live_progress_and_current_file(jobs):
+    import threading
+    started, release = threading.Event(), threading.Event()
+
+    def work(ctx):
+        ctx.add(bytes=10, files=1, total_bytes=10, total_files=1, current="C:/photos/a.jpg")
+        started.set()
+        release.wait(5)
+
+    jid = jobs.submit("scan", work)
+    assert started.wait(5)
+    live = jobs.get(jid)          # ещё выполняется: счётчики и текущий файл видны сразу, без задержки записи в БД
+    assert live["status"] == "running" and live["done_files"] == 1 and live["current"] == "C:/photos/a.jpg"
+    release.set()
+    assert jobs.wait(jid)["status"] == "done"

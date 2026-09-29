@@ -154,7 +154,8 @@ def create_app(data_dir: str | Path | None = None) -> FastAPI:
             while True:
                 job = jobs.get(job_id)
                 payload = json.dumps({k: job[k] for k in ("id", "kind", "status", "total_bytes", "done_bytes",
-                                                          "total_files", "done_files", "error", "result")},
+                                                          "total_files", "done_files", "error", "result")}
+                                     | {"current": job.get("current")},
                                      ensure_ascii=False, default=str)
                 if payload != last:
                     yield f"data: {payload}\n\n"

@@ -1,0 +1,13 @@
+Metadata-Version: 2.4
+Name: picturemanager
+Version: 0.1.0
+Summary: Локальный менеджер фотоархива: каталог, дубли, раскладка по датам, конвертация HEIC
+Requires-Python: >=3.11
+Requires-Dist: fastapi
+Requires-Dist: uvicorn[standard]
+Requires-Dist: pillow
+Requires-Dist: pillow-heif
+Requires-Dist: exifread
+Provides-Extra: dev
+Requires-Dist: pytest; extra == "dev"
+Requires-Dist: httpx; extra == "dev"

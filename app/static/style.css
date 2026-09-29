@@ -30,9 +30,24 @@ table { width: 100%; border-collapse: collapse; background: var(--card); border:
 th, td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--line); font-size: 13px; vertical-align: top; }
 .muted { color: var(--muted); font-size: 13px; }
 .warn { background: var(--warn-bg); color: var(--warn-text); padding: 8px 20px; font-size: 13px; }
-#jobbar { display: flex; gap: 12px; align-items: center; padding: 8px 20px; background: var(--card);
-  border-bottom: 1px solid var(--line); }
-#jobprog { flex: 1; }
+#jobbar { padding: 8px 20px 10px; background: var(--card); border-bottom: 1px solid var(--line); }
+.jobtop { display: flex; gap: 12px; align-items: center; margin-bottom: 6px; }
+#jobtext { flex: 1; font-weight: 500; }
+.jobcur { margin-top: 4px; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.spin { width: 14px; height: 14px; border: 2px solid var(--line); border-top-color: var(--accent); border-radius: 50%;
+  animation: spin .8s linear infinite; flex: none; }
+.finished .spin { animation: none; border-color: var(--accent); }
+.track { position: relative; height: 14px; border-radius: 7px; background: var(--line); overflow: hidden; }
+.track .fill { height: 100%; width: 0; border-radius: 7px; transition: width .3s ease;
+  background: repeating-linear-gradient(-45deg, var(--accent) 0 10px, color-mix(in srgb, var(--accent) 65%, #fff) 10px 20px);
+  background-size: 28px 28px; animation: stripes .7s linear infinite; }
+/* Общий объём заранее неизвестен (скан): бегущий отрезок вместо процентов */
+.track.indeterminate .fill { position: absolute; width: 32%; transition: none;
+  animation: stripes .7s linear infinite, slide 1.3s ease-in-out infinite alternate; }
+.finished .track .fill { animation: none; background: var(--accent); }
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes stripes { to { background-position: 28px 0; } }
+@keyframes slide { from { left: 0; } to { left: 68%; } }
 .card { background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 12px; margin-bottom: 10px; }
 .day > summary { cursor: pointer; padding: 8px 4px; font-weight: 600; }
 .thumbs { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px; padding: 8px 0 16px; }

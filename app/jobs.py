@@ -30,6 +30,7 @@ class JobContext:
         self.total_files = 0
         self.done_files = 0
         self.result: dict = {}
+        self.current: str | None = None   # файл, который обрабатывается сейчас (для индикатора)
         self._last_flush = 0.0
         self._lock = threading.Lock()
 
@@ -48,8 +49,11 @@ class JobContext:
                 self.total_files = files
         self.flush()
 
-    def add(self, bytes: int = 0, files: int = 0, total_bytes: int = 0, total_files: int = 0) -> None:
+    def add(self, bytes: int = 0, files: int = 0, total_bytes: int = 0, total_files: int = 0,
+            current: str | None = None) -> None:
         with self._lock:
+            if current is not None:
+                self.current = current
             self.done_bytes += bytes
             self.done_files += files
             self.total_bytes += total_bytes
@@ -135,7 +139,15 @@ class JobManager:
 
     def get(self, job_id: int) -> dict | None:
         row = self.db.conn().execute("SELECT * FROM jobs WHERE id=?", (job_id,)).fetchone()
-        return self._row(row) if row else None
+        if not row:
+            return None
+        job = self._row(row)
+        with self._lock:
+            ctx = self._ctx.get(job_id)
+        if ctx is not None and job["status"] in ("queued", "running"):
+            job.update(ctx.snapshot())      # живые счётчики вместо записи в БД с задержкой
+            job["current"] = ctx.current
+        return job
 
     def list(self, limit: int = 50) -> list[dict]:
         rows = self.db.conn().execute("SELECT * FROM jobs ORDER BY id DESC LIMIT ?", (limit,)).fetchall()
