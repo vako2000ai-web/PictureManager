@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+.venv/
+venv/
+*.db
+*.db-wal
+*.db-shm
+.thumbnails/
+.pytest_cache/
+.claude/settings.local.json
