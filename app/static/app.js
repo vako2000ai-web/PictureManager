@@ -41,6 +41,7 @@ function trackJob(jobId, onDone) {
   currentJob = jobId;
   const bar = $("#jobbar"), text = $("#jobtext"), prog = $("#jobprog");
   bar.hidden = false;
+  $("#jobcancel").hidden = false;
   const es = new EventSource(`/api/jobs/${jobId}/events`);
   es.onmessage = (ev) => {
     const j = JSON.parse(ev.data);
@@ -50,6 +51,7 @@ function trackJob(jobId, onDone) {
     if (["done", "cancelled", "error", "interrupted"].includes(j.status)) {
       es.close();
       currentJob = null;
+      $("#jobcancel").hidden = true;
       text.textContent += j.error ? ` — ${j.error}` : "";
       setTimeout(() => { if (!currentJob) bar.hidden = true; }, 4000);
       if (onDone) onDone(j);
@@ -213,7 +215,7 @@ $("#buildplan").onclick = async () => {
   if (!dest) return alert("Укажите корень назначения");
   const body = { dest_path: dest, undated: $("#m-undated").checked };
   if ($("#m-root").value) body.root_id = Number($("#m-root").value);
-  try { renderPlan(await api("/plans", { method: "POST", body })); await loadPlans(); } catch (e) { fail(e); }
+  try { const made = await api("/plans", { method: "POST", body }); renderPlan(await api(`/plans/${made.id}`)); await loadPlans(); } catch (e) { fail(e); }
 };
 $("#plan").onclick = async (e) => {
   if (e.target.id !== "runplan" || !currentPlan) return;

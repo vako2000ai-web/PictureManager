@@ -43,7 +43,8 @@ def library(tmp_path):
 def test_static_ui_and_health(client):
     r = client.get("/")
     assert r.status_code == 200 and "PictureManager" in r.text
-    assert client.get("/app.js").status_code == 200
+    js = client.get("/app.js")
+    assert js.status_code == 200 and js.headers["cache-control"] == "no-cache"
     h = client.get("/api/health").json()
     assert h["ok"] and h["ffprobe"] is False
 

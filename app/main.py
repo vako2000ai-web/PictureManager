@@ -19,6 +19,15 @@ from .jobs import JobManager, TERMINAL
 STATIC = Path(__file__).parent / "static"
 
 
+class FreshStatic(StaticFiles):
+    """Статика с обязательной ревалидацией: после обновления браузер не держит старый app.js."""
+
+    async def get_response(self, path, scope):
+        response = await super().get_response(path, scope)
+        response.headers["Cache-Control"] = "no-cache"
+        return response
+
+
 class RootIn(BaseModel):
     path: str
     label: str | None = None
@@ -280,5 +289,5 @@ def create_app(data_dir: str | Path | None = None) -> FastAPI:
         rows = db.conn().execute(q + " ORDER BY id DESC LIMIT ?", args + [min(limit, 1000)]).fetchall()
         return [dict(r) for r in rows]
 
-    app.mount("/", StaticFiles(directory=STATIC, html=True), name="static")
+    app.mount("/", FreshStatic(directory=STATIC, html=True), name="static")
     return app
