@@ -1,0 +1,21 @@
+[project]
+name = "picturemanager"
+version = "0.1.0"
+description = "Локальный менеджер фотоархива: каталог, дубли, раскладка по датам, конвертация HEIC"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi",
+    "uvicorn[standard]",
+    "pillow",
+    "pillow-heif",
+    "exifread",
+]
+
+[project.optional-dependencies]
+dev = ["pytest", "httpx"]
+
+[tool.setuptools]
+packages = ["app"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

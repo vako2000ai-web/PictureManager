@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PictureManager</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <h1>PictureManager</h1>
+  <nav id="nav">
+    <a href="#sources" data-tab="sources">Источники</a>
+    <a href="#catalog" data-tab="catalog">Каталог</a>
+    <a href="#dups" data-tab="dups">Дубли</a>
+    <a href="#move" data-tab="move">Перемещение</a>
+    <a href="#heic" data-tab="heic">HEIC</a>
+    <a href="#journal" data-tab="journal">Журнал</a>
+  </nav>
+</header>
+<div id="warn" class="warn" hidden></div>
+<div id="jobbar" hidden>
+  <span id="jobtext"></span>
+  <progress id="jobprog" max="100" value="0"></progress>
+  <button id="jobcancel">Отмена</button>
+</div>
+<main>
+  <section id="tab-sources">
+    <h2>Источники сканирования</h2>
+    <form id="rootform" class="row">
+      <input id="rootpath" placeholder="Путь, например D:\Photos" size="50" required>
+      <button>Добавить</button>
+    </form>
+    <table id="roots"></table>
+    <h2>Настройки</h2>
+    <form id="settingsform" class="grid">
+      <label>Шаблон папок <input name="path_template"></label>
+      <label>Граница суток (час, 0–23) <input name="day_boundary_hour" type="number" min="0" max="23"></label>
+      <label>Качество JPEG (1–100) <input name="jpeg_quality" type="number" min="1" max="100"></label>
+      <label>Время видео
+        <select name="video_time_policy">
+          <option value="local">creation_time — локальное</option>
+          <option value="machine">UTC → пояс этого ПК</option>
+        </select></label>
+      <label>Путь к ffprobe <input name="ffprobe_path" placeholder="авто"></label>
+      <label>Путь к ffmpeg <input name="ffmpeg_path" placeholder="авто"></label>
+      <button>Сохранить</button>
+    </form>
+  </section>
+
+  <section id="tab-catalog" hidden>
+    <h2>Каталог по датам</h2>
+    <div class="row">
+      <select id="f-root"><option value="">все источники</option></select>
+      <select id="f-kind"><option value="">фото и видео</option><option value="photo">фото</option>
+        <option value="raw">RAW</option><option value="video">видео</option></select>
+      <select id="f-sort"><option value="desc">сначала новые</option><option value="asc">сначала старые</option></select>
+      <label><input type="checkbox" id="f-undated"> только без даты</label>
+      <button id="f-apply">Показать</button>
+    </div>
+    <div class="row">
+      <input id="manualdate" type="datetime-local" step="1">
+      <button id="setdate">Задать дату выбранным</button>
+      <button id="cleardate">Снять ручную дату</button>
+      <span id="selcount" class="muted">выбрано: 0</span>
+    </div>
+    <div id="days"></div>
+  </section>
+
+  <section id="tab-dups" hidden>
+    <h2>Точные дубли (SHA-256)</h2>
+    <div class="row"><button id="dupsearch">Найти дубли</button>
+      <span class="muted">Лишние копии уходят в карантин <code>_duplicates</code>, а не удаляются.</span></div>
+    <div id="dupgroups"></div>
+    <h3>Карантин</h3>
+    <div id="quarantine"></div>
+  </section>
+
+  <section id="tab-move" hidden>
+    <h2>Перемещение в ГГГГ/ММ/ДД</h2>
+    <div class="row">
+      <input id="destpath" placeholder="Корень назначения, например E:\Archive" size="45">
+      <select id="m-root"><option value="">все файлы каталога</option></select>
+      <label><input type="checkbox" id="m-undated"> только без даты</label>
+      <button id="buildplan">Построить план</button>
+    </div>
+    <div id="plan"></div>
+    <h3>История планов</h3>
+    <div id="plans"></div>
+  </section>
+
+  <section id="tab-heic" hidden>
+    <h2>Конвертация HEIC → JPEG</h2>
+    <div class="row">
+      <button id="convertall">Конвертировать все HEIC</button>
+      <button id="quarantineorig">Оригиналы сконвертированных → в карантин</button>
+      <span class="muted">Оригинал по умолчанию остаётся на месте. Качество задаётся в настройках.</span>
+    </div>
+    <div id="heiclist"></div>
+  </section>
+
+  <section id="tab-journal" hidden>
+    <h2>Журнал операций</h2>
+    <button id="reloadjournal">Обновить</button>
+    <table id="journal"></table>
+  </section>
+</main>
+<script src="app.js"></script>
+</body>
+</html>

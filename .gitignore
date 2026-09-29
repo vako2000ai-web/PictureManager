@@ -5,6 +5,6 @@ venv/
 *.db
 *.db-wal
 *.db-shm
-.thumbnails/
+data/
 .pytest_cache/
 .claude/settings.local.json
