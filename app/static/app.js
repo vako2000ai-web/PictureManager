@@ -111,6 +111,41 @@ async function browse(path) {
 
 /* ---- Каталог ---- */
 const sel = new Set();
+let shown = [];
+
+/* удаление: в карантин (восстановимо) либо навсегда */
+function deleteDialog(n, bytes) {
+  return new Promise(resolve => {
+    const d = document.createElement("div"); d.className = "dlg";
+    d.innerHTML = `<div class="box"><h2>Удалить выбранные файлы?</h2><div>Файлов: <b>${n}</b>, объём <b>${fmtBytes(bytes)}</b>.</div>
+      <label style="display:block;margin-top:10px"><input type="radio" name="dm" value="quarantine" checked> В карантин (папка <code>_duplicates</code>, можно восстановить)</label>
+      <label style="display:block"><input type="radio" name="dm" value="permanent"> Навсегда (без возможности восстановления)</label>
+      <div class="row" style="margin-top:16px;justify-content:flex-end"><button class="btn secondary" id="no">Отмена</button><button class="btn danger" id="ok">Удалить</button></div></div>`;
+    document.body.append(d);
+    $("#no", d).onclick = () => { d.remove(); resolve(null); };
+    $("#ok", d).onclick = () => { const m = d.querySelector("input[name=dm]:checked").value; d.remove(); resolve(m); };
+  });
+}
+
+/* просмотр фото/видео на весь экран, навигация стрелками */
+function openViewer(index) {
+  if (index < 0) return;
+  const v = document.createElement("div"); v.className = "viewer";
+  document.body.append(v);
+  const render = () => {
+    const f = shown[index];
+    const media = f.kind === "video" ? `<video src="/api/files/${f.id}/view" controls autoplay></video>` : `<img src="/api/files/${f.id}/view" alt="">`;
+    v.innerHTML = `<button class="vbtn vclose" title="Закрыть (Esc)">✕</button><button class="vbtn vprev" title="Назад (←)">‹</button><button class="vbtn vnext" title="Вперёд (→)">›</button>
+      <div class="vmedia">${media}</div><div class="vcap">${esc(f.root_path)}/${esc(f.rel_path)} · ${esc(f.eff_date || "без даты")} · ${fmtBytes(f.size)} · ${index + 1}/${shown.length}</div>`;
+    $(".vclose", v).onclick = close; $(".vprev", v).onclick = () => go(-1); $(".vnext", v).onclick = () => go(1);
+  };
+  const go = d => { const i = index + d; if (i >= 0 && i < shown.length) { index = i; render(); } };
+  const key = e => { if (e.key === "Escape") close(); else if (e.key === "ArrowLeft") go(-1); else if (e.key === "ArrowRight") go(1); };
+  function close() { document.removeEventListener("keydown", key); v.remove(); }
+  v.onclick = e => { if (e.target === v || e.target.classList.contains("vmedia")) close(); };
+  document.addEventListener("keydown", key);
+  render();
+}
 screens.catalog = async () => {
   const main = $("#main");
   const roots = await api("/roots");
@@ -121,21 +156,36 @@ screens.catalog = async () => {
     <select id="fstatus"><option value="">Любой статус</option><option value="present">present</option><option value="missing">missing</option><option value="quarantined">quarantined</option></select>
     <label><input type="checkbox" id="fnodate"> без даты</label>
     <button class="btn secondary" id="fgo">Показать</button></div>
-    <div class="row"><input type="datetime-local" id="mdate"><button class="btn" id="mset">Задать дату выбранным</button><button class="btn secondary" id="mreset">Сбросить ручную дату</button><span id="selcount" class="muted"></span></div></div>
+    <div class="row"><input type="datetime-local" id="mdate"><button class="btn" id="mset">Задать дату выбранным</button><button class="btn secondary" id="mreset">Сбросить ручную дату</button><button class="btn danger" id="mdel">Удалить выбранные</button><span id="selcount" class="muted"></span></div></div>
     <div id="feed"></div>`;
   const load = async () => {
     const q = new URLSearchParams({ sort: $("#fsort").value, limit: 500 });
     for (const [k, id] of [["kind", "fkind"], ["root_id", "froot"], ["status", "fstatus"]]) if ($("#" + id).value) q.set(k, $("#" + id).value);
     if ($("#fnodate").checked) q.set("no_date", "true");
     const data = await api("/catalog?" + q);
+    shown = data.days.flatMap(d => d.files);
+    for (const id of [...sel]) if (!shown.some(f => f.id === id)) sel.delete(id);
+    $("#selcount").textContent = sel.size ? `выбрано: ${sel.size}` : "";
     $("#feed").innerHTML = `<div class="muted">Всего: ${data.total}${data.total > 500 ? " (показаны первые 500)" : ""}</div>` + data.days.map(d => `<div class="card"><h3>${esc(d.day || "Без даты")} <span class="muted">· ${d.count}</span></h3><div class="grid">
       ${d.files.map(f => `<div class="thumb"><input type="checkbox" data-id="${f.id}" ${sel.has(f.id) ? "checked" : ""}>
-        <img loading="lazy" src="/api/files/${f.id}/thumb" alt="">
+        <img loading="lazy" style="cursor:zoom-in" data-open="${f.id}" src="/api/files/${f.id}/thumb" alt="">
         <div class="cap" title="${esc(f.rel_path)}">${esc(f.rel_path.split("/").pop())}</div>
         <div class="cap muted">${esc(f.date_source || "—")} ${f.is_derived ? '<span class="badge">производный</span>' : ""} ${f.status !== "present" ? `<span class="badge warn">${esc(f.status)}</span>` : ""}</div></div>`).join("")}</div></div>`).join("");
     $("#feed").querySelectorAll("input[data-id]").forEach(c => c.onchange = () => { c.checked ? sel.add(+c.dataset.id) : sel.delete(+c.dataset.id); $("#selcount").textContent = sel.size ? `выбрано: ${sel.size}` : ""; });
+    $("#feed").querySelectorAll("img[data-open]").forEach(i => i.onclick = () => openViewer(shown.findIndex(f => f.id === +i.dataset.open)));
   };
   $("#fgo").onclick = load;
+  $("#mdel").onclick = async () => {
+    if (!sel.size) return alert("Выберите файлы");
+    const files = shown.filter(f => sel.has(f.id));
+    const mode = await deleteDialog(files.length, files.reduce((a, f) => a + f.size, 0));
+    if (!mode) return;
+    try {
+      const r = await post("/files/delete", { file_ids: files.map(f => f.id), permanent: mode === "permanent", confirm: true });
+      sel.clear(); if (r.failed.length) alert(`Не удалено: ${r.failed.length}\n` + r.failed.map(x => x.reason).join("\n"));
+      load(); loadStatus();
+    } catch (e) { alertErr(e); }
+  };
   $("#mset").onclick = async () => {
     if (!sel.size || !$("#mdate").value) return alert("Выберите файлы и дату");
     await api("/files/date", { method: "PATCH", body: { file_ids: [...sel], taken_at: $("#mdate").value.length === 16 ? $("#mdate").value + ":00" : $("#mdate").value } }); load();

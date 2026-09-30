@@ -17,12 +17,12 @@ PLACEHOLDER_SVG = (
 )
 
 
-def _photo_thumb(src: str, dst: str) -> bool:
+def _photo_thumb(src: str, dst: str, size=SIZE, quality: int = 80) -> bool:
     try:
         with Image.open(src) as img:
             img = ImageOps.exif_transpose(img)
-            img.thumbnail(SIZE)
-            img.convert("RGB").save(dst, "JPEG", quality=80)
+            img.thumbnail(size)
+            img.convert("RGB").save(dst, "JPEG", quality=quality)
         return True
     except Exception:  # noqa: BLE001
         pass
@@ -30,8 +30,8 @@ def _photo_thumb(src: str, dst: str) -> bool:
         thumb = piexif.load(src).get("thumbnail")
         if thumb:
             with Image.open(io.BytesIO(thumb)) as img:
-                img.thumbnail(SIZE)
-                img.convert("RGB").save(dst, "JPEG", quality=80)
+                img.thumbnail(size)
+                img.convert("RGB").save(dst, "JPEG", quality=quality)
             return True
     except Exception:  # noqa: BLE001
         pass
@@ -69,4 +69,25 @@ def get_thumbnail(db, cfg, file_id: int) -> str | None:
         return str(cached)
     if os.path.exists(tmp):
         os.remove(tmp)
+    return None
+
+
+PREVIEW_SIZE = (2000, 2000)
+NATIVE_IMAGE = {"jpg", "jpeg", "png", "webp", "gif", "bmp"}
+NATIVE_VIDEO = {"mp4", "webm", "m4v", "mov"}
+
+
+def get_preview(db, cfg, file_id: int) -> str | None:
+    """JPEG-превью для просмотра форматов, которые браузер не открывает (HEIC, RAW, TIFF)."""
+    f = catalog.get_file(db, file_id)
+    if f is None or f["kind"] == "video":
+        return None
+    cfg.thumb_dir.mkdir(parents=True, exist_ok=True)
+    cached = cfg.thumb_dir / f"preview_{f['id']}_{f['mtime_ns']}.jpg"
+    if cached.exists():
+        return str(cached)
+    tmp = str(cached) + ".tmp.jpg"
+    if _photo_thumb(f["abs"], tmp, PREVIEW_SIZE, 90):
+        os.replace(tmp, cached)
+        return str(cached)
     return None

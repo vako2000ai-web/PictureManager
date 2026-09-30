@@ -182,6 +182,8 @@ def list_catalog(db, sort="desc", kind=None, root_id=None, status=None, no_date=
         where.append("f.root_id=?"); params.append(root_id)
     if status:
         where.append("f.status=?"); params.append(status)
+    else:  # файлы из карантина показываются только по явному фильтру
+        where.append("f.status!='quarantined'")
     if no_date:
         where.append(f"{EFF_DATE} IS NULL")
     if is_derived is not None:

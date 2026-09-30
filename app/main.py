@@ -9,7 +9,9 @@ from fastapi import Body, FastAPI, HTTPException, Query
 from fastapi.responses import FileResponse, Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 
-from . import catalog, dupes, heic, journal, mover, scanner, thumbs
+import mimetypes
+
+from . import catalog, dupes, heic, journal, mover, scanner, thumbs, trash
 from .config import Config
 from .db import Database
 from .jobs import FINISHED, JobManager
@@ -145,6 +147,24 @@ def create_app(data_dir=None) -> FastAPI:
         if path:
             return FileResponse(path, media_type="image/jpeg")
         return Response(thumbs.PLACEHOLDER_SVG, media_type="image/svg+xml")
+
+    @app.get("/api/files/{file_id}/view")
+    def files_view(file_id: int):
+        """Файл для просмотра: оригинал, если его открывает браузер, иначе JPEG-превью."""
+        f = catalog.get_file(db, file_id)
+        if f is None or not os.path.exists(f["abs"]):
+            raise HTTPException(404, "файл не найден")
+        if f["ext"] in thumbs.NATIVE_IMAGE or (f["kind"] == "video" and f["ext"] in thumbs.NATIVE_VIDEO):
+            return FileResponse(f["abs"], media_type=mimetypes.guess_type(f["abs"])[0] or "application/octet-stream")
+        preview = thumbs.get_preview(db, cfg, file_id)
+        if preview:
+            return FileResponse(preview, media_type="image/jpeg")
+        return Response(thumbs.PLACEHOLDER_SVG, media_type="image/svg+xml")
+
+    @app.post("/api/files/delete")
+    def files_delete(body: dict = Body(...)):
+        _confirm(body)
+        return trash.delete_files(db, body.get("file_ids", []), bool(body.get("permanent")))
 
     # ---- дубли ----
     @app.post("/api/dupes/scan", status_code=202)

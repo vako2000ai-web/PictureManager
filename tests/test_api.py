@@ -88,3 +88,31 @@ def test_server_binds_localhost_only():
     import app.__main__ as m
 
     assert m.HOST == "127.0.0.1"
+
+
+def test_view_and_delete(client, tmp_path):
+    from tests.test_heic import make_heic
+
+    src = tmp_path / "src"
+    make_jpeg(src / "a.jpg")
+    make_jpeg(src / "b.jpg", color=(1, 2, 3))
+    make_heic(src / "c.HEIC")
+    rid = client.post("/api/roots", json={"path": str(src)}).json()["id"]
+    wait_job(client, client.post(f"/api/roots/{rid}/scan").json()["job_id"])
+    ids = {f["rel_path"]: f["id"] for d in client.get("/api/catalog").json()["days"] for f in d["files"]}
+
+    r = client.get(f"/api/files/{ids['a.jpg']}/view")
+    assert r.status_code == 200 and r.content == (src / "a.jpg").read_bytes()
+    r = client.get(f"/api/files/{ids['c.HEIC']}/view")  # HEIC отдаётся как JPEG-превью
+    assert r.headers["content-type"] == "image/jpeg"
+
+    assert client.post("/api/files/delete", json={"file_ids": [ids["a.jpg"]]}).status_code == 400
+    r = client.post("/api/files/delete", json={"file_ids": [ids["a.jpg"]], "confirm": True}).json()
+    assert r["deleted"] == 1 and not (src / "a.jpg").exists() and (src / "_duplicates" / "a.jpg").exists()
+    assert client.post("/api/quarantine/restore", json={"file_ids": [ids["a.jpg"]]}).json()[0]["restored"]
+    assert (src / "a.jpg").exists()
+
+    r = client.post("/api/files/delete", json={"file_ids": [ids["b.jpg"]], "permanent": True, "confirm": True}).json()
+    assert r["deleted"] == 1 and not (src / "b.jpg").exists()
+    left = [f["rel_path"] for d in client.get("/api/catalog").json()["days"] for f in d["files"]]
+    assert "b.jpg" not in left

@@ -29,3 +29,10 @@ progress { flex:1; height:10px; }
 .dlg .box { background:var(--card); padding:20px; border-radius:10px; max-width:520px; width:90%; }
 .path { font-family:ui-monospace,monospace; font-size:12px; word-break:break-all; }
 .keeper { background:rgba(37,99,235,.08); }
+
+.viewer { position:fixed; inset:0; background:rgba(0,0,0,.92); z-index:20; display:flex; flex-direction:column; align-items:center; justify-content:center; }
+.vmedia { flex:1; display:flex; align-items:center; justify-content:center; width:100%; min-height:0; padding:16px 64px; }
+.vmedia img, .vmedia video { max-width:100%; max-height:100%; object-fit:contain; }
+.vcap { color:#e5e7eb; padding:8px 16px; font-size:12px; word-break:break-all; text-align:center; }
+.vbtn { position:absolute; background:rgba(255,255,255,.15); color:#fff; border:0; border-radius:50%; width:44px; height:44px; font-size:24px; cursor:pointer; }
+.vclose { top:12px; right:12px; } .vprev { left:12px; top:50%; } .vnext { right:12px; top:50%; }
